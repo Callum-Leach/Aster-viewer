@@ -163,8 +163,8 @@ st.sidebar.header("2 · Search settings")
 short_name = st.sidebar.text_input("Collection short name", value="AST_L1A")
 provider = st.sidebar.text_input("Provider", value="LPCLOUD")
 version = st.sidebar.text_input("Collection version", value="004")
-start_date = st.sidebar.date_input("Start date", value=pd.Timestamp("2022-01-01").date())
-end_date = st.sidebar.date_input("End date", value=pd.Timestamp("2022-12-31").date())
+start_date = st.sidebar.date_input("Start date", value=pd.Timestamp("2022-01-01").date(), min_value=pd.Timestamp("1900-01-01").date(), max_value=pd.Timestamp("2100-01-01").date())
+end_date = st.sidebar.date_input("End date", value=pd.Timestamp("2022-12-31").date(), min_value=pd.Timestamp("1900-01-01").date(), max_value=pd.Timestamp("2100-01-01").date())
 search_clicked = st.sidebar.button("🔎 Search ASTER granules", type="primary", use_container_width=True)
 
 if search_clicked:
@@ -306,10 +306,7 @@ with summary_tab:
         # ---------------------------------------------------------
         # 2. Monthly glacier AOI coverage
         # ---------------------------------------------------------
-        if (
-            st.session_state.get("results_aoi_is_vector", False)
-            and aoi_for_results is not None
-        ):
+        if aoi_for_results is not None:
             monthly_coverage = monthly_summary(df_all, aoi_for_results)
 
             coverage_heatmap = (
@@ -351,11 +348,7 @@ with summary_tab:
             st.plotly_chart(fig, use_container_width=True)
 
         else:
-            st.info(
-                "Monthly glacier coverage requires a vector outline of the "
-                "glacier. The bounding box is sufficient for granule counts, "
-                "but not for glacier-specific coverage statistics."
-            )
+            st.info("Define an area of interest to calculate monthly coverage.")
 
     else:
         st.info("No granules with valid acquisition dates were found.")
@@ -390,9 +383,10 @@ with map_tab:
             [min(90, maxy + lat_padding), min(180, maxx + lon_padding)],
         ]
         m = folium.Map(location=centre, zoom_start=6, tiles=None, control_scale=True)
+        folium.map.CustomPane("aoiPane", z_index=625).add_to(m)
         folium.TileLayer("OpenStreetMap", name="OpenStreetMap").add_to(m)
         folium.TileLayer(tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri", name="Esri satellite", overlay=False, control=True).add_to(m)
-        folium.GeoJson(aoi_for_results.to_json(), name="Area of interest", style_function=lambda _: {"color": "red", "weight": 3, "fillOpacity": 0.04}).add_to(m)
+        folium.GeoJson(aoi_for_results.to_json(), name="Area of interest", pane="aoiPane", style_function=lambda _: {"color": "red", "weight": 3, "fillColor": "red", "fillOpacity": 0.04}).add_to(m)
         map_source = filtered if st.checkbox("Map only filtered scenes", value=True) else df_all
         colours = {"Stereo-valid": "#16803c", "Stereo-invalid": "#d97706", "Unknown": "#64748b"}
         for _, row in map_source.iterrows():
